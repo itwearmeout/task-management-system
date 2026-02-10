@@ -1,0 +1,18 @@
+#Rust Build Artifacts
+/target/
+**/*.rs.bk
+
+
+.env
+.env.backup
+.env.local
+
+
+.vscode/
+.idea/
+*.swp
+*~
+
+
+.DS_Store
+Thumbs.db
