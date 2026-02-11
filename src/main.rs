@@ -9,8 +9,8 @@ use sqlx::postgres::PgPoolOptions;
 mod config;
 use config::Config;
 
-
 mod task;
+
 
 #[tokio::main]
 async fn main() ->anyhow::Result<()> {
@@ -30,14 +30,14 @@ async fn main() ->anyhow::Result<()> {
     sqlx::migrate!().run(&db).await?;
     
     //Create router
-    let router01 = Router::new()
-        .route("/task",get(task::task_get).post(task::task_post));
+    let router = Router::new()
+        .nest("/task",task::router());
 
     //Define IP and Port
-    let address = "0.0.0.0:3000";
+    let address = "0.0.0.0:8080";
     let listener = tokio::net::TcpListener::bind(address).await.unwrap();
 
-    axum::serve(listener,router01).await.unwrap();
+    axum::serve(listener,router).await.unwrap();
 
     Ok(())
 }

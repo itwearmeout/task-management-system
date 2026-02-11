@@ -1,7 +1,7 @@
 // Route test
-curl http://localhost:3000/task
+curl http://localhost:8080/task
 
 // Route GET
-curl -X GET http://localhost:3000/task
+curl -X GET http://localhost:8080/task/get
 
 //Route 
