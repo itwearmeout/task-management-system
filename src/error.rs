@@ -15,5 +15,26 @@ use axum::Json;
 use std::borrow::Cow;
 use std::collections::Hashmap;
 
+#[derive(thiserror::Error,Debug)]
+pub enum Error {
+    #[error("authentication required")]
+    Unautherize,
 
+    #[error("user may not perform that action")]
+    Forbidden,
+
+    #[error("request path not found")]
+    NotFound,
+
+    #[error("error in the request body")]
+    UnprocessableEntry {
+        errors: Hashmap<Cow<'static, str>, Vec<Cow<'static,str>>>,
+    },
+
+    #[error("error occured with the database")]
+    Sqlx(#[from] sqlx::Error),
+
+    #[error("an internal server error occurred")]
+    Anyhow(#[from] anyhow::error),
+}
 
