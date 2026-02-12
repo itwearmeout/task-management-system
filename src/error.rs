@@ -28,7 +28,7 @@ pub enum Error {
 
     #[error("error in the request body")]
     UnprocessableEntity {
-        errors: Hashmap<Cow<'static, str>, Vec<Cow<'static,str>>>,
+        errors: HashMap<Cow<'static, str>, Vec<Cow<'static,str>>>,
     },
 
     #[error("error occured with the database")]
@@ -44,7 +44,7 @@ impl Error {
         K: Into<Cow<'static, str>>,
         V: Intor<Cow<'static, str>>
     {
-        let mut error_map = Hashmap::new();
+        let mut error_map = HashMap::new();
 
         for(key, val) in errors {
             error_map
@@ -67,3 +67,64 @@ impl Error {
     }
 }
 
+impl IntoResponse for Error {
+    type Body = Full<Bytes>;
+    type BodyError = <Full<Bytes> as HttpsBody>::Error;
+
+    fn into_response(self) -> Response<Self::Body> {
+        match self {
+            Self::UnprocessableEntity { errors } => {
+                #[derive(serde::Serialize)]
+                struct Errors {
+                    errors: HashMap<Cow<'static, str>, Vec<Cow<'static,str >>>,
+                }
+
+                return (StatusCode::UNPROCESSABLE_ENTITY, Json(Errors { errors })).into_response();
+            }
+            Self::Unautherize => {
+                return (
+                    self.status_code(),
+                    [(WWW_AUTHENTICATE, HeaderValue::from_static("Token"))]
+                        .into_iter()
+                        .collect::<HeaderMap>(),
+                    self.to_string()
+                ).into_response();
+            }
+            Self::Sqlx(ref e) => {
+                log::eroor!("SQLx error: {:?}", e);
+            }
+            Self::Anyhow(ref e) => {
+                log::error!("Generic error: {:?}", e);
+            }
+
+            _ => (),
+        }
+        (self.status_code(), self.to_string()).into_response()
+    }
+}
+
+pub trait ResultExt<T> {
+    fn on_constraint(
+        self,
+        name: &str,
+        f: impl FnOnce(Box<dyn DatabaseError>) -> Error,
+    ) -> Result<T, Error>;
+}
+
+impl<T, E> ResultExt<T> for Result<T, E>
+where 
+    E: Into<Error>,
+{
+    fn on_constraint(
+        self,
+        name: &str,
+        map_err: impl FnOnce(Box<dyn DatabaseError>) -> Error,
+    ) -> Result<T, Error> {
+        self.map_err(|e| match e.into() {
+            Error::Sqlx(sqlx::Error::Database(dbe)) if dbe.constraint() == Some(name) => {
+                map_err(dbe)
+            }
+            e => e,
+        })
+    }
+}
