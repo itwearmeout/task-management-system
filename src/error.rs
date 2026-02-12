@@ -1,6 +1,6 @@
 use axum::body::{
     Bytes,
-    Full,
+    Body,
     HttpBody
 };
 use axum::http::header::WWW_AUTHENTICATE;
@@ -12,13 +12,16 @@ use axum::http::{
 };
 use axum::response::IntoResponse;
 use axum::Json;
+
+use sqlx::error::DatabaseError;
+
 use std::borrow::Cow;
-use std::collections::Hashmap;
+use std::collections::HashMap;
 
 #[derive(thiserror::Error,Debug)]
 pub enum Error {
     #[error("authentication required")]
-    Unautherize,
+    Unauthorized,
 
     #[error("user may not perform that action")]
     Forbidden,
@@ -35,14 +38,14 @@ pub enum Error {
     Sqlx(#[from] sqlx::Error),
 
     #[error("an internal server error occurred")]
-    Anyhow(#[from] anyhow::error),
+    Anyhow(#[from] anyhow::Error),
 }
 
 impl Error {
     pub fn unprocessable_entity<K, V>(errors: impl IntoIterator<Item = (K, V)>) -> Self
     where
         K: Into<Cow<'static, str>>,
-        V: Intor<Cow<'static, str>>
+        V: Into<Cow<'static, str>>
     {
         let mut error_map = HashMap::new();
 
@@ -58,7 +61,7 @@ impl Error {
 
     pub fn status_code(&self) -> StatusCode {
         match self {
-            Self::Unautherize => StatusCode::UNAUTHERIZE,
+            Self::Unautherize => StatusCode::UNAUTHORIZE,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::UnprocessableEntity{ .. } => StatusCode::UNPROCESSABLE_ENTITY,
@@ -69,7 +72,7 @@ impl Error {
 
 impl IntoResponse for Error {
     type Body = Full<Bytes>;
-    type BodyError = <Full<Bytes> as HttpsBody>::Error;
+    type BodyError = <Full<Bytes> as HttpBody>::Error;
 
     fn into_response(self) -> Response<Self::Body> {
         match self {
@@ -91,7 +94,7 @@ impl IntoResponse for Error {
                 ).into_response();
             }
             Self::Sqlx(ref e) => {
-                log::eroor!("SQLx error: {:?}", e);
+                log::error!("SQLx error: {:?}", e);
             }
             Self::Anyhow(ref e) => {
                 log::error!("Generic error: {:?}", e);
