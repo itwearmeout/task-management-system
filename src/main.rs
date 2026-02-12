@@ -1,6 +1,5 @@
 use axum::{
     Router,
-    routing::{get},
 };
 use anyhow::Context;
 use clap::Parser;
