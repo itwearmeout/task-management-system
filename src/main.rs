@@ -8,8 +8,8 @@ use sqlx::postgres::PgPoolOptions;
 mod config;
 use config::Config;
 
-mod task;
-
+use task_management_system::task;
+use task_management_system::error;
 
 #[tokio::main]
 async fn main() ->anyhow::Result<()> {
@@ -30,7 +30,8 @@ async fn main() ->anyhow::Result<()> {
     
     //Create router
     let router = Router::new()
-        .nest("/task",task::router());
+        .nest("/api/task",task::router())
+        .with_state(db);
 
     //Define IP and Port
     let address = "0.0.0.0:8080";

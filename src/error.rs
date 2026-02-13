@@ -13,6 +13,8 @@ use axum::http::{
 use axum::response::IntoResponse;
 use axum::Json;
 
+use serde_json::json;
+
 use sqlx::error::DatabaseError;
 
 use std::borrow::Cow;
@@ -37,7 +39,7 @@ pub enum Error {
 }
 
 impl IntoResponse for Error {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> Response<Body> {
         let (status, error_message) = match self {
             Error::Sqlx(_)=>{
                 (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error")
@@ -47,7 +49,7 @@ impl IntoResponse for Error {
             },
             Error::Unauthorized=>(StatusCode::UNAUTHORIZED, "Unauthorized"),
             Error::Forbidden => (StatusCode::FORBIDDEN, "Forbidden"),
-            Error::NotFound => (StatusCode::NOTFOUND, "NotFound"),
+            Error::NotFound => (StatusCode::NOT_FOUND, "NotFound"),
         };
 
         let body = Json(json!({
