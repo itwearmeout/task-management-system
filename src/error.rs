@@ -17,9 +17,6 @@ use serde_json::json;
 
 use sqlx::error::DatabaseError;
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-
 #[derive(thiserror::Error,Debug)]
 pub enum Error {
     #[error("authentication required")]
