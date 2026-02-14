@@ -34,7 +34,7 @@ async fn main() ->anyhow::Result<()> {
         .with_state(db);
 
     //Define IP and Port
-    let address = "0.0.0.0:8080";
+    let address = "0.0.0.0:3000";
     let listener = tokio::net::TcpListener::bind(address).await.unwrap();
 
     axum::serve(listener,router).await.unwrap();

@@ -7,7 +7,6 @@ use sqlx::PgPool;
 
 pub mod task;
 
-
 pub use task::{
     task_get,
     task_post,
