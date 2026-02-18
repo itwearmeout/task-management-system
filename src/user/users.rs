@@ -1,28 +1,59 @@
+use anyhow::{Context};
+use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::{rand_core::OsRng, SaltString}};
 use axum::Json;
-use clap::builder::Str;
+use clap::{builder::Str, error};
 use crate::error::{Error, Result};
 
 #[derive(serde::Serialize, serde::Deserialize)]
-struct User{
+pub struct UserBody<T>{
+    user: T,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct User{
     id :String,
     username: String,
-    email :String,
+    email : Option<String>,
     angkatan :u16,
 }
 
 #[derive(serde::Deserialize)]
 pub struct CreateUser{
-    id :String,
     username: String,
-    email :String,
+    email : Option<String>,
+    password :String,
     angkatan :u16,
 }
 
+#[derive(serde::Deserialize)]
+pub struct LoginUser{
+    username: String,
+    password: String,
+}
 
 pub async fn user_login(){
 
 }
 
-pub async fn user_create(){
+pub async fn user_create(Json(req): Json<UserBody<CreateUser>>)->Result<Json<UserBody<User>>>{
+   Ok(Json(UserBody {
+        user: User {
+            id: "some id".to_string(),
+            username: "req.user.username".to_string(),
+            email: Some("req.user.email".to_string()),
+            angkatan: 2024,
+        }
+    }))
+}
 
+async fn password_hasher(password: String)->Result<String>{
+    Ok(tokio::task::spawn_blocking(move || -> anyhow::Result<String>{
+        let salt = SaltString::generate(&mut OsRng);
+
+        let hash = PasswordHash::generate
+            (Argon2::default(), password, &salt)
+            .map_err(|e| anyhow::anyhow!("Failed to hash password: {e}"))?.to_string();
+
+        Ok(hash)
+    }).await.context("Hash error")??)
 }

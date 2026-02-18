@@ -44,9 +44,15 @@ impl IntoResponse for Error {
             Error::Anyhow(_)=>{
                 (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error")
             },
-            Error::Unauthorized=>(StatusCode::UNAUTHORIZED, "Unauthorized"),
-            Error::Forbidden => (StatusCode::FORBIDDEN, "Forbidden"),
-            Error::NotFound => (StatusCode::NOT_FOUND, "NotFound"),
+            Error::Unauthorized=>{
+                (StatusCode::UNAUTHORIZED, "Unauthorized")
+            },
+            Error::Forbidden => {
+                (StatusCode::FORBIDDEN, "Forbidden")
+            },
+            Error::NotFound => {
+                (StatusCode::NOT_FOUND, "NotFound")
+            },
         };
 
         let body = Json(json!({
