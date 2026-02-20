@@ -12,7 +12,12 @@ use users::{
     user_create,
 };
 
-pub fn router() -> Router<PgPool> {
+#[derive(Clone)]
+pub struct ApiContext {
+    pub db: PgPool,
+}
+
+pub fn router() -> Router {
     Router::new()
         .route("/login", post(user_login))
         .route("/create",post(user_create))

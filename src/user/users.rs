@@ -1,8 +1,8 @@
 use anyhow::{Context};
 use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::{rand_core::OsRng, SaltString}};
-use axum::Json;
+use axum::{Json, Extension};
 use clap::{builder::Str, error};
-use crate::error::{Error, Result};
+use crate::{error::{Error, Result}, user::ApiContext};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UserBody<T>{
@@ -35,15 +35,8 @@ pub async fn user_login(){
 
 }
 
-pub async fn user_create(Json(req): Json<UserBody<CreateUser>>)->Result<Json<UserBody<User>>>{
-   Ok(Json(UserBody {
-        user: User {
-            id: "some id".to_string(),
-            username: "req.user.username".to_string(),
-            email: Some("req.user.email".to_string()),
-            angkatan: 2024,
-        }
-    }))
+pub async fn user_create(Json(req): Json<UserBody<CreateUser>>, Extension(ctx): Extension<ApiContext>)->Result<Json<UserBody<User>>>{
+    let password_hash = password_hasher(req.user.password).await?;
 }
 
 async fn password_hasher(password: String)->Result<String>{
