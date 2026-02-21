@@ -1,5 +1,6 @@
 use axum::{
     Router,
+    Extension,
 };
 use anyhow::Context;
 use clap::Parser;
@@ -10,6 +11,8 @@ use config::Config;
 
 use task_management_system::task;
 use task_management_system::error;
+use task_management_system::user;
+use task_management_system::ApiContext;
 
 #[tokio::main]
 async fn main() ->anyhow::Result<()> {
@@ -28,10 +31,13 @@ async fn main() ->anyhow::Result<()> {
 
     sqlx::migrate!().run(&db).await?;
     
+    let api_context = ApiContext{db};
+
     //Create router
     let router = Router::new()
         .nest("/api/task",task::router())
-        .with_state(db);
+        .nest("/api/users",user::router())
+        .layer(Extension(api_context));
 
     //Define IP and Port
     let address = "0.0.0.0:3000";

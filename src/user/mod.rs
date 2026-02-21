@@ -3,7 +3,6 @@ use axum::{
     routing::{get, post},
 
 };
-use sqlx::PgPool;
 
 pub mod users;
 
@@ -12,10 +11,7 @@ use users::{
     user_create,
 };
 
-#[derive(Clone)]
-pub struct ApiContext {
-    pub db: PgPool,
-}
+use crate::ApiContext;
 
 pub fn router() -> Router {
     Router::new()

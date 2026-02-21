@@ -3,7 +3,6 @@ use axum::{
     routing::{get, post},
 
 };
-use sqlx::PgPool;
 
 pub mod task;
 
@@ -13,7 +12,9 @@ pub use task::{
     task_put,
 };
 
-pub fn router() -> Router<PgPool> {
+use crate::ApiContext;
+
+pub fn router() -> Router {
     Router::new()
         .route("/get", get(task_get))
         .route("/post",post(task_post))

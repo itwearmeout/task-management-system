@@ -11,18 +11,17 @@ pub struct UserBody<T>{
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct User{
-    id :String,
     username: String,
-    email : Option<String>,
-    angkatan :u16,
+    email : String,
+    angkatan :i32,
 }
 
 #[derive(serde::Deserialize)]
 pub struct CreateUser{
     username: String,
-    email : Option<String>,
+    email : String,
     password :String,
-    angkatan :u16,
+    angkatan :i32,
 }
 
 #[derive(serde::Deserialize)]
@@ -35,8 +34,35 @@ pub async fn user_login(){
 
 }
 
-pub async fn user_create(Json(req): Json<UserBody<CreateUser>>, Extension(ctx): Extension<ApiContext>)->Result<Json<UserBody<User>>>{
-    let password_hash = password_hasher(req.user.password).await?;
+pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<CreateUser>>)->Result<Json<UserBody<User>>>{
+    let hash_password = password_hasher(req.user.password).await?;
+
+    let user_id = sqlx::query_scalar!(
+        r#"insert into "users" (username, password_hash, email, angkatan) values($1, $2, $3, $4) returning user_id"#,
+        req.user.username,
+        hash_password,
+        req.user.email,
+        req.user.angkatan as i32
+    )
+    .fetch_one(&ctx.db)
+    .await
+    .map_err(|e| {
+        if let sqlx::Error::Database(db_err) = &e {
+            if let Some(constraint) = db_err.constraint() {
+                match constraint {
+                    "user_username_key" => {
+                        return Error::Forbidden;
+                    }
+                    "user_email_key" => {
+                        return Error::Forbidden;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Error::Sqlx(e)
+    })?;
+    Ok(Json(UserBody { user: User { username: req.user.username, email: req.user.email, angkatan: req.user.angkatan } }))
 }
 
 async fn password_hasher(password: String)->Result<String>{

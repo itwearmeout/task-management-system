@@ -10,7 +10,7 @@ create table "users"
 (
     user_id uuid primary key default uuid_generate_v1mc(),
     username text collate "case_insensitive" unique not null,
-    password_hash not null,
+    password_hash text not null,
     email text collate "case_insensitive" unique default null,
     angkatan int not null,
     created_at timestamptz not null default now(),
