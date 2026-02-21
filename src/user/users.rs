@@ -1,5 +1,5 @@
-use anyhow::{Context};
-use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::{rand_core::OsRng, SaltString}};
+
+use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::{self, SaltString, rand_core::OsRng}};
 use axum::{Json, Extension};
 use clap::{builder::Str, error};
 use crate::{error::{Error, Result}, user::ApiContext};
@@ -12,14 +12,14 @@ pub struct UserBody<T>{
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct User{
     username: String,
-    email : String,
+    email : Option<String>,
     angkatan :i32,
 }
 
 #[derive(serde::Deserialize)]
 pub struct CreateUser{
     username: String,
-    email : String,
+    email : Option<String>,
     password :String,
     angkatan :i32,
 }
@@ -30,8 +30,22 @@ pub struct LoginUser{
     password: String,
 }
 
-pub async fn user_login(){
+pub async fn user_login(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<LoginUser>>)->Result<Json<UserBody<User>>>{
+    let user = sqlx::query!(
+        r#"
+            select user_id, email, username, password_hash, angkatan
+            from users
+            where username = $1
+        "#,
+        req.user.username,
+    )
+    .fetch_optional(&ctx.db)
+    .await?
+    .ok_or(Error::UnprocessableEntity("Username not found".to_string()))?;
 
+    password_login(req.user.password, user.password_hash).await?;
+
+    Ok(Json(UserBody { user: User { username: user.username, email: user.email, angkatan: user.angkatan } }))
 }
 
 pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<CreateUser>>)->Result<Json<UserBody<User>>>{
@@ -51,10 +65,10 @@ pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<
             if let Some(constraint) = db_err.constraint() {
                 match constraint {
                     "user_username_key" => {
-                        return Error::Forbidden;
+                        return Error::UnprocessableEntity("Username is taken".to_string());
                     }
                     "user_email_key" => {
-                        return Error::Forbidden;
+                        return Error::UnprocessableEntity("Email is taken".to_string());
                     }
                     _ => {}
                 }
@@ -66,13 +80,29 @@ pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<
 }
 
 async fn password_hasher(password: String)->Result<String>{
-    Ok(tokio::task::spawn_blocking(move || -> anyhow::Result<String>{
+    tokio::task::spawn_blocking(move || -> Result<String>{
         let salt = SaltString::generate(&mut OsRng);
 
         let hash = PasswordHash::generate
             (Argon2::default(), password, &salt)
-            .map_err(|e| anyhow::anyhow!("Failed to hash password: {e}"))?.to_string();
+            .map_err(|_| Error::HashError)?;
 
-        Ok(hash)
-    }).await.context("Hash error")??)
+        Ok(hash.to_string())
+    })
+    .await
+    .map_err(|_| Error::HashError)?
+}
+
+async fn password_login(password: String, password_hash: String)-> Result<()> {
+        tokio::task::spawn_blocking(move || -> Result<()> {
+            let hash = PasswordHash::new(&password_hash)
+                .map_err(|_| Error::HashError)?;
+            hash.verify_password(&[&Argon2::default()], password)
+                .map_err(|_| Error::InvalidPassword)?;
+            Ok(())
+        })
+        .await
+        .map_err(|_| Error::HashError)??;
+
+        Ok(())
 }

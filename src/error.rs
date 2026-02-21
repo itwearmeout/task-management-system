@@ -28,31 +28,52 @@ pub enum Error {
     #[error("request path not found")]
     NotFound,
 
+    #[error("password hash error")]
+    HashError,
+
+    #[error("wrong password")]
+    InvalidPassword,
+
     #[error("error occured with the database")]
     Sqlx(#[from] sqlx::Error),
 
     #[error("an internal server error occurred")]
     Anyhow(#[from] anyhow::Error),
+
+    #[error("unprocessable request: {0}")]
+    UnprocessableEntity(String),
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response<Body> {
         let (status, error_message) = match self {
             Error::Sqlx(_)=>{
-                (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error")
+                (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error".to_string())
             },
             Error::Anyhow(_)=>{
-                (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error")
+                (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error".to_string())
             },
             Error::Unauthorized=>{
-                (StatusCode::UNAUTHORIZED, "Unauthorized")
+                (StatusCode::UNAUTHORIZED, "Unauthorized".to_string())
             },
             Error::Forbidden => {
-                (StatusCode::FORBIDDEN, "Forbidden")
+                (StatusCode::FORBIDDEN, "Forbidden".to_string())
             },
             Error::NotFound => {
-                (StatusCode::NOT_FOUND, "NotFound")
+                (StatusCode::NOT_FOUND, "NotFound".to_string())
             },
+            Error::HashError => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
+            },
+            Error::InvalidPassword => {
+                (StatusCode::UNAUTHORIZED, "Invalid username or password".to_string())
+            },
+            Error::UnprocessableEntity(msg) => {
+                (StatusCode::UNPROCESSABLE_ENTITY, msg)
+            },
+            _ => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "Unknown error".to_string())
+            }
         };
 
         let body = Json(json!({
