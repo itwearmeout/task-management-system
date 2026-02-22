@@ -5,8 +5,13 @@ pub mod error;
 pub mod user;
 
 use sqlx::PgPool;
+use std::sync::Arc;
+
+pub mod config;
+use config::Config;
 
 #[derive(Clone)]
 pub struct ApiContext {
     pub db: PgPool,
+    pub config: Arc<Config>,
 }

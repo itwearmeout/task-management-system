@@ -5,10 +5,9 @@ use axum::{
 use anyhow::Context;
 use clap::Parser;
 use sqlx::postgres::PgPoolOptions;
-
-mod config;
 use config::Config;
 
+use task_management_system::config;
 use task_management_system::task;
 use task_management_system::error;
 use task_management_system::user;
@@ -31,7 +30,7 @@ async fn main() ->anyhow::Result<()> {
 
     sqlx::migrate!().run(&db).await?;
     
-    let api_context = ApiContext{db};
+    let api_context = ApiContext{db, config: config.into()};
 
     //Create router
     let router = Router::new()

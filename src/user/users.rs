@@ -51,7 +51,7 @@ pub async fn user_login(Extension(ctx): Extension<ApiContext>, Json(req): Json<U
 pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<CreateUser>>)->Result<Json<UserBody<User>>>{
     let hash_password = password_hasher(req.user.password).await?;
 
-    let user_id = sqlx::query_scalar!(
+    let _user_id = sqlx::query_scalar!(
         r#"insert into "users" (username, password_hash, email, angkatan) values($1, $2, $3, $4) returning user_id"#,
         req.user.username,
         hash_password,

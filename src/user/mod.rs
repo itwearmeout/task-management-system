@@ -6,6 +6,8 @@ use axum::{
 
 pub mod users;
 
+pub mod auth;
+
 use users::{
     user_login,
     user_create,
