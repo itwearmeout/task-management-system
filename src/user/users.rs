@@ -1,7 +1,6 @@
 
-use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::{self, SaltString, rand_core::OsRng}};
+use argon2::{Argon2, PasswordHash, password_hash::{SaltString, rand_core::OsRng}};
 use axum::{Json, Extension};
-use clap::{builder::Str, error};
 use crate::{error::{Error, Result}, user::{ApiContext, auth::{generate_token}}};
 
 #[derive(serde::Serialize, serde::Deserialize)]

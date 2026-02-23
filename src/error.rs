@@ -1,12 +1,7 @@
 use axum::body::{
-    Bytes,
     Body,
-    HttpBody
 };
-use axum::http::header::WWW_AUTHENTICATE;
 use axum::http::{
-    HeaderMap,
-    HeaderValue,
     Response,
     StatusCode
 };
@@ -14,8 +9,6 @@ use axum::response::IntoResponse;
 use axum::Json;
 
 use serde_json::json;
-
-use sqlx::error::DatabaseError;
 
 #[derive(thiserror::Error,Debug)]
 pub enum Error {
