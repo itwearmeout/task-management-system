@@ -2,7 +2,7 @@
 use argon2::{Argon2, PasswordHash, PasswordHasher, password_hash::{self, SaltString, rand_core::OsRng}};
 use axum::{Json, Extension};
 use clap::{builder::Str, error};
-use crate::{error::{Error, Result}, user::ApiContext};
+use crate::{error::{Error, Result}, user::{ApiContext, auth::{generate_token}}};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UserBody<T>{
@@ -14,6 +14,7 @@ pub struct User{
     username: String,
     email : Option<String>,
     angkatan :i32,
+    token :String,
 }
 
 #[derive(serde::Deserialize)]
@@ -45,13 +46,21 @@ pub async fn user_login(Extension(ctx): Extension<ApiContext>, Json(req): Json<U
 
     password_login(req.user.password, user.password_hash).await?;
 
-    Ok(Json(UserBody { user: User { username: user.username, email: user.email, angkatan: user.angkatan } }))
+    let token = generate_token(&user.user_id, &ctx.config.hmac_key)?;
+
+    Ok(Json(UserBody { user: User 
+        { username: user.username, 
+            email: user.email, 
+            angkatan: user.angkatan,
+            token, 
+        } 
+    }))
 }
 
 pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<CreateUser>>)->Result<Json<UserBody<User>>>{
     let hash_password = password_hasher(req.user.password).await?;
 
-    let _user_id = sqlx::query_scalar!(
+    let user_id = sqlx::query_scalar!(
         r#"insert into "users" (username, password_hash, email, angkatan) values($1, $2, $3, $4) returning user_id"#,
         req.user.username,
         hash_password,
@@ -76,7 +85,15 @@ pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<
         }
         Error::Sqlx(e)
     })?;
-    Ok(Json(UserBody { user: User { username: req.user.username, email: req.user.email, angkatan: req.user.angkatan } }))
+    let token = generate_token(&user_id, &ctx.config.hmac_key)?;
+    Ok(Json(UserBody { user: User 
+        { 
+            username: req.user.username, 
+            email: req.user.email, 
+            angkatan: req.user.angkatan,
+            token, 
+        } 
+    }))
 }
 
 async fn password_hasher(password: String)->Result<String>{
