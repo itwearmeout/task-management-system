@@ -8,6 +8,7 @@ anyhow = "1.0.101"
 argon2 = "0.5.3"
 async-trait = "0.1.89"
 axum = { version = "0.8.8", features = ["http2", "macros", "ws"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.5.57", features = ["derive", "env"] }
 dotenv = "0.15.0"
 env_logger = "0.11.8"

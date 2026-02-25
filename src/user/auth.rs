@@ -1,4 +1,4 @@
-use axum::{extract::{FromRequestParts}, http::{header::AUTHORIZATION, request::Parts}};
+use axum::{extract::{Extension, FromRequestParts}, http::{header::AUTHORIZATION, request::Parts}};
 use crate::user::ApiContext;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use uuid::Uuid;
@@ -11,15 +11,22 @@ pub struct AuthUser {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
-struct AuthUserClaim{
+pub struct AuthUserClaim{
     user_id: Uuid,
     exp: i64,
 }
 
-impl FromRequestParts<ApiContext> for AuthUserClaim  {
+impl<S> FromRequestParts<S> for AuthUserClaim
+where
+    S: Send + Sync,  
+{
     type Rejection = Error;
 
-    async fn from_request_parts(parts: &mut Parts, state: &ApiContext) -> Result<Self> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self> {
+        let Extension(ctx) = Extension::<ApiContext>::from_request_parts(parts, state)
+            .await
+            .map_err(|_| Error::Unauthorized)?;
+
         let auth_header = parts.headers.get(AUTHORIZATION)
             .ok_or(Error::Unauthorized)?;
 
@@ -31,7 +38,7 @@ impl FromRequestParts<ApiContext> for AuthUserClaim  {
 
         let validation = Validation::new(Algorithm::HS384);
 
-        let key = DecodingKey::from_secret(state.config.hmac_key.as_bytes());
+        let key = DecodingKey::from_secret(ctx.config.hmac_key.as_bytes());
         let token_data = decode::<AuthUserClaim>(token, &key, &validation)
             .map_err(|_| Error::Unauthorized)?;
 

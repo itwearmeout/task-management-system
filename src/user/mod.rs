@@ -4,6 +4,8 @@ use axum::{
 
 };
 
+use crate::ApiContext;
+
 pub mod users;
 
 pub mod auth;
@@ -12,8 +14,6 @@ use users::{
     user_login,
     user_create,
 };
-
-use crate::ApiContext;
 
 pub fn router() -> Router {
     Router::new()

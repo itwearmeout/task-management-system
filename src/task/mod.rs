@@ -4,18 +4,18 @@ use axum::{
 
 };
 
+use crate::ApiContext;
+
 pub mod task;
 
 pub use task::{
     task_get,
-    task_post,
-    task_put,
+    task_add,
+    task_delete,
 };
-
-use crate::ApiContext;
 
 pub fn router() -> Router {
     Router::new()
         .route("/get", get(task_get))
-        .route("/post",post(task_post))
+        .route("/post",post(task_add))
 }

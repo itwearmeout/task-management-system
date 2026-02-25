@@ -1,4 +1,3 @@
-
 use argon2::{Argon2, PasswordHash, password_hash::{SaltString, rand_core::OsRng}};
 use axum::{Json, Extension};
 use crate::{error::{Error, Result}, user::{ApiContext, auth::{generate_token}}};
