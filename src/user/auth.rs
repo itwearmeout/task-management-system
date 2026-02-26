@@ -1,5 +1,5 @@
 use axum::{extract::{Extension, FromRequestParts}, http::{header::AUTHORIZATION, request::Parts}};
-use crate::user::ApiContext;
+use crate::ApiContext;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use uuid::Uuid;
 use crate::{error::{Error, Result}};

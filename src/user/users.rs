@@ -1,6 +1,6 @@
 use argon2::{Argon2, PasswordHash, password_hash::{SaltString, rand_core::OsRng}};
-use axum::{Json, Extension};
-use crate::{error::{Error, Result}, user::{ApiContext, auth::{generate_token}}};
+use axum::{Json, Extension, http::StatusCode};
+use crate::{error::{Error, Result}, ApiContext, user::auth::{generate_token, AuthUserClaim}};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct UserBody<T>{
@@ -28,6 +28,9 @@ pub struct LoginUser{
     username: String,
     password: String,
 }
+
+#[derive(serde::Deserialize)]
+pub struct DeleteUser {}
 
 pub async fn user_login(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<LoginUser>>)->Result<Json<UserBody<User>>>{
     let user = sqlx::query!(
@@ -120,4 +123,22 @@ async fn password_login(password: String, password_hash: String)-> Result<()> {
         .map_err(|_| Error::HashError)??;
 
         Ok(())
+}
+
+pub async fn user_delete(
+    Extension(ctx): Extension<ApiContext>,
+    claims: AuthUserClaim,
+) -> Result<StatusCode> {
+    sqlx::query!(
+        r#"
+            delete from users
+            where user_id = $1
+        "#,
+        claims.user_id,
+    )
+    .execute(&ctx.db)
+    .await
+    .map_err(Error::Sqlx)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

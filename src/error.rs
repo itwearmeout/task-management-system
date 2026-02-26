@@ -64,9 +64,6 @@ impl IntoResponse for Error {
             Error::UnprocessableEntity(msg) => {
                 (StatusCode::UNPROCESSABLE_ENTITY, msg)
             },
-            _ => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Unknown error".to_string())
-            }
         };
 
         let body = Json(json!({

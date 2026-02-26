@@ -1737,12 +1737,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "runtime-tokio"
-version = "0.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "916bbfde7fa9ea0c7369ca7c98bf284170463393b7c875022d1b35ea7bb671ad"
-
-[[package]]
 name = "rustc_version"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2267,7 +2261,6 @@ dependencies = [
  "log",
  "rand 0.9.2",
  "rand_core 0.10.0",
- "runtime-tokio",
  "serde",
  "serde_json",
  "sha2",

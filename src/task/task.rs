@@ -1,4 +1,4 @@
-use axum::{Extension, Json};
+use axum::{Extension, Json, http::StatusCode};
 use uuid::Uuid;
 use crate::ApiContext;
 use crate::error::{Error, Result};
@@ -42,6 +42,11 @@ pub struct AddTask {
     due_at: DateTime<Utc>,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct DeleteTask {
+    task_id: Uuid,
+}
+
 pub async fn task_get(claims: AuthUserClaim, ctx: Extension<ApiContext>) -> Result<Json<MultTaskBody<TaskItems>>>{
 
     let tasks = sqlx::query_as!(
@@ -82,6 +87,25 @@ pub async fn task_add(claims: AuthUserClaim, ctx: Extension<ApiContext>, req: Js
 
 }
 
-pub async fn task_delete(){
+pub async fn task_delete(
+    claims: AuthUserClaim,
+    ctx: Extension<ApiContext>,
+    req: Json<TaskBody<DeleteTask>>,
+) -> Result<StatusCode> {
+    let result = sqlx::query!(
+        r#"
+            DELETE FROM user_tasks
+            WHERE user_id = $1
+              AND task_id = $2
+        "#,
+        claims.user_id,
+        req.task.task_id,
+    )
+    .execute(&ctx.db)
+    .await
+    .map_err(Error::Sqlx)?;
 
+    let _ = result.rows_affected();
+
+    Ok(StatusCode::NO_CONTENT)
 }
