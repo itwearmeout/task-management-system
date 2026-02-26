@@ -59,7 +59,6 @@ pub async fn task_get(claims: AuthUserClaim, ctx: Extension<ApiContext>) -> Resu
 
 }
 
-#[axum::debug_handler]
 pub async fn task_add(claims: AuthUserClaim, ctx: Extension<ApiContext>, req: Json<TaskBody<AddTask>>) -> Result<Json<TaskBody<Task>>>{
 
     let _task = sqlx::query_scalar!(
