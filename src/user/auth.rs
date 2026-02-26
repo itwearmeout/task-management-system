@@ -12,7 +12,7 @@ pub struct AuthUser {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct AuthUserClaim{
-    user_id: Uuid,
+    pub user_id: Uuid,
     exp: i64,
 }
 
