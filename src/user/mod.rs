@@ -1,12 +1,12 @@
 use axum::{
     Router,
-    routing::{post, delete},
+    routing::{delete, post},
 };
 pub mod users;
 
 pub mod auth;
 
-use users::{user_login, user_create, user_delete};
+use users::{user_create, user_delete, user_login};
 
 pub fn router() -> Router {
     Router::new()

@@ -1,30 +1,37 @@
-use argon2::{Argon2, PasswordHash, password_hash::{SaltString, rand_core::OsRng}};
-use axum::{Json, Extension, http::StatusCode};
-use crate::{error::{Error, Result}, ApiContext, user::auth::{generate_token, AuthUserClaim}};
+use crate::{
+    ApiContext,
+    error::{Error, Result},
+    user::auth::{AuthUserClaim, generate_token},
+};
+use argon2::{
+    Argon2, PasswordHash,
+    password_hash::{SaltString, rand_core::OsRng},
+};
+use axum::{Extension, Json, http::StatusCode};
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct UserBody<T>{
+pub struct UserBody<T> {
     user: T,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct User{
+pub struct User {
     username: String,
-    email : Option<String>,
-    angkatan :i32,
-    token :String,
+    email: Option<String>,
+    angkatan: i32,
+    token: String,
 }
 
 #[derive(serde::Deserialize)]
-pub struct CreateUser{
+pub struct CreateUser {
     username: String,
-    email : Option<String>,
-    password :String,
-    angkatan :i32,
+    email: Option<String>,
+    password: String,
+    angkatan: i32,
 }
 
 #[derive(serde::Deserialize)]
-pub struct LoginUser{
+pub struct LoginUser {
     username: String,
     password: String,
 }
@@ -32,7 +39,10 @@ pub struct LoginUser{
 #[derive(serde::Deserialize)]
 pub struct DeleteUser {}
 
-pub async fn user_login(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<LoginUser>>)->Result<Json<UserBody<User>>>{
+pub async fn user_login(
+    Extension(ctx): Extension<ApiContext>,
+    Json(req): Json<UserBody<LoginUser>>,
+) -> Result<Json<UserBody<User>>> {
     let user = sqlx::query!(
         r#"
             select user_id, email, username, password_hash, angkatan
@@ -49,16 +59,20 @@ pub async fn user_login(Extension(ctx): Extension<ApiContext>, Json(req): Json<U
 
     let token = generate_token(&user.user_id, &ctx.config.hmac_key)?;
 
-    Ok(Json(UserBody { user: User 
-        { username: user.username, 
-            email: user.email, 
+    Ok(Json(UserBody {
+        user: User {
+            username: user.username,
+            email: user.email,
             angkatan: user.angkatan,
-            token, 
-        } 
+            token,
+        },
     }))
 }
 
-pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<UserBody<CreateUser>>)->Result<Json<UserBody<User>>>{
+pub async fn user_create(
+    Extension(ctx): Extension<ApiContext>,
+    Json(req): Json<UserBody<CreateUser>>,
+) -> Result<Json<UserBody<User>>> {
     let hash_password = password_hasher(req.user.password).await?;
 
     let user_id = sqlx::query_scalar!(
@@ -71,38 +85,37 @@ pub async fn user_create(Extension(ctx): Extension<ApiContext>, Json(req): Json<
     .fetch_one(&ctx.db)
     .await
     .map_err(|e| {
-        if let sqlx::Error::Database(db_err) = &e {
-            if let Some(constraint) = db_err.constraint() {
-                match constraint {
-                    "user_username_key" => {
-                        return Error::UnprocessableEntity("Username is taken".to_string());
-                    }
-                    "user_email_key" => {
-                        return Error::UnprocessableEntity("Email is taken".to_string());
-                    }
-                    _ => {}
+        if let sqlx::Error::Database(db_err) = &e
+            && let Some(constraint) = db_err.constraint()
+        {
+            match constraint {
+                "user_username_key" => {
+                    return Error::UnprocessableEntity("Username is taken".to_string());
                 }
+                "user_email_key" => {
+                    return Error::UnprocessableEntity("Email is taken".to_string());
+                }
+                _ => {}
             }
         }
         Error::Sqlx(e)
     })?;
     let token = generate_token(&user_id, &ctx.config.hmac_key)?;
-    Ok(Json(UserBody { user: User 
-        { 
-            username: req.user.username, 
-            email: req.user.email, 
+    Ok(Json(UserBody {
+        user: User {
+            username: req.user.username,
+            email: req.user.email,
             angkatan: req.user.angkatan,
-            token, 
-        } 
+            token,
+        },
     }))
 }
 
-async fn password_hasher(password: String)->Result<String>{
-    tokio::task::spawn_blocking(move || -> Result<String>{
+async fn password_hasher(password: String) -> Result<String> {
+    tokio::task::spawn_blocking(move || -> Result<String> {
         let salt = SaltString::generate(&mut OsRng);
 
-        let hash = PasswordHash::generate
-            (Argon2::default(), password, &salt)
+        let hash = PasswordHash::generate(Argon2::default(), password, &salt)
             .map_err(|_| Error::HashError)?;
 
         Ok(hash.to_string())
@@ -111,18 +124,17 @@ async fn password_hasher(password: String)->Result<String>{
     .map_err(|_| Error::HashError)?
 }
 
-async fn password_login(password: String, password_hash: String)-> Result<()> {
-        tokio::task::spawn_blocking(move || -> Result<()> {
-            let hash = PasswordHash::new(&password_hash)
-                .map_err(|_| Error::HashError)?;
-            hash.verify_password(&[&Argon2::default()], password)
-                .map_err(|_| Error::InvalidPassword)?;
-            Ok(())
-        })
-        .await
-        .map_err(|_| Error::HashError)??;
-
+async fn password_login(password: String, password_hash: String) -> Result<()> {
+    tokio::task::spawn_blocking(move || -> Result<()> {
+        let hash = PasswordHash::new(&password_hash).map_err(|_| Error::HashError)?;
+        hash.verify_password(&[&Argon2::default()], password)
+            .map_err(|_| Error::InvalidPassword)?;
         Ok(())
+    })
+    .await
+    .map_err(|_| Error::HashError)??;
+
+    Ok(())
 }
 
 pub async fn user_delete(

@@ -1,16 +1,11 @@
-use axum::body::{
-    Body,
-};
-use axum::http::{
-    Response,
-    StatusCode
-};
-use axum::response::IntoResponse;
 use axum::Json;
+use axum::body::Body;
+use axum::http::{Response, StatusCode};
+use axum::response::IntoResponse;
 
 use serde_json::json;
 
-#[derive(thiserror::Error,Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("authentication required")]
     Unauthorized,
@@ -40,30 +35,26 @@ pub enum Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response<Body> {
         let (status, error_message) = match self {
-            Error::Sqlx(_)=>{
-                (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error".to_string())
-            },
-            Error::Anyhow(_)=>{
-                (StatusCode::INTERNAL_SERVER_ERROR,"Internal server error".to_string())
-            },
-            Error::Unauthorized=>{
-                (StatusCode::UNAUTHORIZED, "Unauthorized".to_string())
-            },
-            Error::Forbidden => {
-                (StatusCode::FORBIDDEN, "Forbidden".to_string())
-            },
-            Error::NotFound => {
-                (StatusCode::NOT_FOUND, "NotFound".to_string())
-            },
-            Error::HashError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
-            },
-            Error::InvalidPassword => {
-                (StatusCode::UNAUTHORIZED, "Invalid username or password".to_string())
-            },
-            Error::UnprocessableEntity(msg) => {
-                (StatusCode::UNPROCESSABLE_ENTITY, msg)
-            },
+            Error::Sqlx(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
+            Error::Anyhow(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
+            Error::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
+            Error::Forbidden => (StatusCode::FORBIDDEN, "Forbidden".to_string()),
+            Error::NotFound => (StatusCode::NOT_FOUND, "NotFound".to_string()),
+            Error::HashError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
+            Error::InvalidPassword => (
+                StatusCode::UNAUTHORIZED,
+                "Invalid username or password".to_string(),
+            ),
+            Error::UnprocessableEntity(msg) => (StatusCode::UNPROCESSABLE_ENTITY, msg),
         };
 
         let body = Json(json!({

@@ -1,15 +1,11 @@
 use axum::{
     Router,
-    routing::{get, post, delete},
+    routing::{delete, get, post},
 };
 
-pub mod task;
+pub mod task_handler;
 
-pub use task::{
-    task_get,
-    task_add,
-    task_delete,
-};
+pub use task_handler::{task_add, task_delete, task_get};
 
 pub fn router() -> Router {
     Router::new()

@@ -4,6 +4,8 @@ pub mod error;
 
 pub mod user;
 
+pub mod worker;
+
 use sqlx::PgPool;
 use std::sync::Arc;
 
