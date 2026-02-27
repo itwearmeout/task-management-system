@@ -1,7 +1,11 @@
 use crate::ApiContext;
 use crate::error::{Error, Result};
 use crate::user::auth::AuthUserClaim;
-use axum::{Extension, Json, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Extension, Query},
+    http::StatusCode,
+};
 use sqlx::types::chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -47,6 +51,28 @@ pub struct DeleteTask {
     task_id: Uuid,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct TaskSearchQuery {
+    pub keyword: Option<String>,
+    pub status: Option<String>,
+}
+
+fn parse_status_filter(status: Option<String>) -> Result<Option<bool>> {
+    if let Some(raw) = status {
+        let normalized = raw.trim().to_lowercase();
+
+        match normalized.as_str() {
+            "complete" | "completed" | "true" => Ok(Some(true)),
+            "incomplete" | "pending" | "false" => Ok(Some(false)),
+            _ => Err(Error::UnprocessableEntity(
+                "status filter must be one of: complete, incomplete, true, false".into(),
+            )),
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 pub async fn task_get(
     claims: AuthUserClaim,
     ctx: Extension<ApiContext>,
@@ -60,6 +86,35 @@ pub async fn task_get(
             ORDER BY due_at
         "#,
         claims.user_id,
+    )
+    .fetch_all(&ctx.db)
+    .await
+    .map_err(Error::Sqlx)?;
+
+    Ok(Json(MultTaskBody { task: tasks }))
+}
+
+pub async fn search_tasks(
+    Extension(ctx): Extension<ApiContext>,
+    auth_user: AuthUserClaim,
+    Query(query): Query<TaskSearchQuery>,
+) -> Result<Json<MultTaskBody<TaskItems>>> {
+    let keyword_pattern = query.keyword.map(|raw| format!("%{}%", raw));
+    let status_filter = parse_status_filter(query.status)?;
+
+    let tasks = sqlx::query_as!(
+        TaskItems,
+        r#"
+            SELECT task_subject, due_at, is_complete
+            FROM user_tasks
+            WHERE user_id = $1
+              AND ($2::text IS NULL OR task_subject ILIKE $2)
+              AND ($3::boolean IS NULL OR is_complete = $3)
+            ORDER BY due_at
+        "#,
+        auth_user.user_id,
+        keyword_pattern,
+        status_filter,
     )
     .fetch_all(&ctx.db)
     .await
